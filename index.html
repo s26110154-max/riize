@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pen</title>
+  </head>
+  <body>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -205,6 +218,7 @@
         .card.unlocked:nth-child(1) { background: linear-gradient(135deg, var(--card-pink), #ffe3e8); }
         .card.unlocked:nth-child(2) { background: linear-gradient(135deg, var(--card-blue), #e0fbfb); }
         .card.unlocked:nth-child(3) { background: linear-gradient(135deg, var(--card-purple), #f3e8ff); }
+        .card.unlocked:nth-child(4) { background: linear-gradient(135deg, var(--card-yellow), #fffde1); }
 
         .card.unlocked:hover {
             transform: translateY(-8px) scale(1.03);
@@ -367,12 +381,13 @@
                 <span class="card-title">Week 3<br>迷因產生器</span>
             </a>
 
-            <!-- 按鈕 4 - 16: 未解鎖灰色關卡 -->
-            <div class="card locked">
-                <span class="card-lock-icon">🔒</span>
-                <span class="card-title">Week 4</span>
-            </div>
+            <!-- 按鈕 4: 已解鎖 -->
+            <a href="w4/index.html" class="card unlocked">
+                <span class="badge-unlocked">✨ 已解鎖</span>
+                <span class="card-title">Week 4<br>悄悄話</span>
+            </a>
 
+            <!-- 按鈕 5 - 16: 未解鎖灰色關卡 -->
             <div class="card locked">
                 <span class="card-lock-icon">🔒</span>
                 <span class="card-title">Week 5</span>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>朋友對我的動態留言板 | Macaron Whispers</title>
+    <!-- 引入 Google 字體：可愛圓潤的 Fredoka & 繁體中文 Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==========================================================================
+           1. 全局色彩與變數設定 (馬卡龍色系控制區)
+           ========================================================================== */
+        :root {
+            /* 主背景漸層色 */
+            --bg-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 30%, #ff9a9e 60%, #fecfef 100%);
+            
+            /* 馬卡龍卡片背景色彩池 (四種可可愛愛的粉嫩色彩) */
+            --card-pink: #ffd1dc;
+            --card-blue: #c4faf8;
+            --card-purple: #e7c6ff;
+            --card-yellow: #fcf6bd;
+            
+            /* 文字顏色 */
+            --text-color: #5a4b5c;       /* 主要文字 (深紫灰色) */
+            --text-muted: #8c7b8d;       /* 次要/時間文字 (中紫灰色) */
+            
+            /* 陰影與發光特效 */
+            --shadow-soft: 0 8px 20px rgba(230, 160, 180, 0.3);
+            --shadow-glow: 0 0 30px rgba(255, 117, 140, 0.8), 0 10px 25px rgba(255, 182, 193, 0.6);
+            --highlight-border: #ff758c; /* Highlight 時的強烈邊框顏色 */
+        }
+
+        /* 基礎重置 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background: var(--bg-gradient);
+            background-size: 300% 300%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: var(--text-color);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景流動動態 */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 背景飄浮夢幻氣泡裝飾 */
+        .bubble {
+            position: fixed;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(3px);
+            animation: float 8s infinite ease-in-out;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .bubble:nth-child(1) { width: 90px; height: 90px; left: 10%; top: 20%; animation-duration: 9s; }
+        .bubble:nth-child(2) { width: 60px; height: 60px; right: 12%; top: 15%; animation-duration: 7s; }
+        .bubble:nth-child(3) { width: 110px; height: 110px; left: 15%; bottom: 10%; animation-duration: 11s; }
+        .bubble:nth-child(4) { width: 50px; height: 50px; right: 10%; bottom: 20%; animation-duration: 8s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-25px) rotate(10deg); }
+        }
+
+        /* 主頁面外容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 頁眉標題區 */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.3rem;
+            color: #4a3e4d;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        header p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            display: inline-block;
+            padding: 6px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        /* ==========================================================================
+           2. 載入中 (Loading) 動畫區
+           ========================================================================== */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 0;
+        }
+
+        .spinner {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .spinner div {
+            width: 16px;
+            height: 16px;
+            background-color: #ff758c;
+            border-radius: 50%;
+            animation: macaronBounce 1.4s infinite ease-in-out both;
+        }
+
+        .spinner div:nth-child(1) { background-color: #ff9a9e; animation-delay: -0.32s; }
+        .spinner div:nth-child(2) { background-color: #a1c4fd; animation-delay: -0.16s; }
+        .spinner div:nth-child(3) { background-color: #e7c6ff; }
+
+        @keyframes macaronBounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #5a4b5c;
+            letter-spacing: 1px;
+            animation: pulseText 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* ==========================================================================
+           3. 瀑布流牆面 Layout (Masonry Grid)
+           ========================================================================== */
+        .masonry-wall {
+            column-count: 4; /* 預設桌面端顯示 4 欄 */
+            column-gap: 20px;
+            width: 100%;
+        }
+
+        /* 響應式斷點調整欄數 */
+        @media (max-width: 1024px) { .masonry-wall { column-count: 3; } }
+        @media (max-width: 768px)  { .masonry-wall { column-count: 2; } }
+        @media (max-width: 480px)  { .masonry-wall { column-count: 1; } }
+
+        /* ==========================================================================
+           4. 留言卡片樣式與 Highlight 輪播動畫
+           ========================================================================== */
+        .card {
+            break-inside: avoid; /* 避免卡片在欄位切割處斷開 */
+            margin-bottom: 20px;
+            border-radius: 22px;
+            padding: 22px 20px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            
+            /* 平滑過渡動畫（控制放大、模糊、縮放等效果） */
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+                        box-shadow 0.6s ease,
+                        filter 0.6s ease,
+                        opacity 0.6s ease,
+                        border-color 0.6s ease;
+            position: relative;
+        }
+
+        /* 馬卡龍色系色彩分配 */
+        .card.color-0 { background: linear-gradient(135deg, rgba(255,209,220,0.85), rgba(255,255,255,0.8)); }
+        .card.color-1 { background: linear-gradient(135deg, rgba(196,250,248,0.85), rgba(255,255,255,0.8)); }
+        .card.color-2 { background: linear-gradient(135deg, rgba(231,198,255,0.85), rgba(255,255,255,0.8)); }
+        .card.color-3 { background: linear-gradient(135deg, rgba(252,246,189,0.85), rgba(255,255,255,0.8)); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .author-tag {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #4a3e4d;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.6);
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-color);
+            word-break: break-word;
+            white-space: pre-wrap; /* 保留留言換行 */
+        }
+
+        /* --------------------------------------------------------------------------
+           關鍵特效：無被選中時的「淡化模糊狀態」與被選中的「Highlight 高亮狀態」
+           -------------------------------------------------------------------------- */
+        
+        /* 當牆面啟動 Highlight 模式時，預設所有卡片都變暗、微模糊 */
+        .masonry-wall.has-highlight .card {
+            opacity: 0.45;
+            filter: blur(1.5px) grayscale(20%);
+            transform: scale(0.96);
+        }
+
+        /* 被選中的卡片：震撼放大幅現、邊框發亮 */
+        .masonry-wall.has-highlight .card.highlight {
+            opacity: 1 !important;
+            filter: blur(0) grayscale(0%) !important;
+            transform: scale(1.08) translateY(-6px) !important;
+            z-index: 100;
+            border-color: var(--highlight-border) !important;
+            box-shadow: var(--shadow-glow) !important;
+        }
+
+        /* 手動 Hover 時也可放大 */
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(230, 140, 170, 0.35);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景夢幻氣泡 -->
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+
+    <div class="container">
+        <!-- 頁面頂部 Header -->
+        <header>
+            <h1>✨ 悄悄話動態留言板 ✨</h1>
+            <p>Macaron Whispers Wall</p>
+        </header>
+
+        <!-- 1. 載入中動畫區 -->
+        <div id="loading" class="loading-container">
+            <div class="spinner">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <div class="loading-text">讀取留言中...</div>
+        </div>
+
+        <!-- 2. 瀑布流留言牆容器 -->
+        <div id="wall" class="masonry-wall"></div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           【可調整參數控制區】
+           ========================================================================== */
+        // Google 試算表 CSV 發布網址
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDNIMh7uvACayLT_LVtirtSxVoNDKNdzwWMl5zYDQ7sshFl-Jy0mvghLmQWCRpfnz2RnXYIfXpNoWp/pub?output=csv';
+
+        // 輪播 Highlight 轉換時間 (單位：毫秒，3000ms = 3 秒)
+        const ROTATE_INTERVAL = 3000;
+
+        // 全域變數
+        let messages = [];         // 存放解析後的留言資料
+        let currentIndex = -1;      // 當前 Highlight 的卡片索引
+        let rotationTimer = null;   // 計時器物件
+
+        /* ==========================================================================
+           【CSV 解析器】處理引號、逗號與內部換行
+           ========================================================================== */
+        function parseCSV(text) {
+            const lines = [];
+            let row = [];
+            let currentField = '';
+            let insideQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+
+                if (char === '"') {
+                    if (insideQuotes && nextChar === '"') {
+                        currentField += '"';
+                        i++; // 跳過下一個雙引號
+                    } else {
+                        insideQuotes = !insideQuotes;
+                    }
+                } else if (char === ',' && !insideQuotes) {
+                    row.push(currentField.trim());
+                    currentField = '';
+                } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++;
+                    row.push(currentField.trim());
+                    if (row.some(field => field !== '')) {
+                        lines.push(row);
+                    }
+                    row = [];
+                    currentField = '';
+                } else {
+                    currentField += char;
+                }
+            }
+            if (currentField !== '' || row.length > 0) {
+                row.push(currentField.trim());
+                lines.push(row);
+            }
+
+            // 去除首行標題 (時間戳記, 名字, 悄悄話)
+            if (lines.length > 0) lines.shift();
+
+            // 轉化為物件陣列
+            return lines.map(cols => ({
+                timestamp: cols[0] || '',
+                name: cols[1] || '匿名朋友',
+                content: cols[2] || ''
+            })).filter(item => item.content !== ''); // 排除空白留言
+        }
+
+        /* ==========================================================================
+           【渲染瀑布流卡片】
+           ========================================================================== */
+        function renderWall(dataList) {
+            const wall = document.getElementById('wall');
+            wall.innerHTML = '';
+
+            dataList.forEach((item, index) => {
+                const card = document.createElement('div');
+                
+                // 隨機分配馬卡龍色彩 class (color-0 ~ color-3)
+                const colorIndex = index % 4;
+                card.className = `card color-${colorIndex}`;
+                card.dataset.index = index;
+
+                // 格式化時間 (只保留日期與年月時間)
+                let formattedTime = item.timestamp;
+                if (formattedTime.includes(' ')) {
+                    formattedTime = formattedTime.split(' ')[0];
+                }
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="author-tag">🌸 ${escapeHTML(item.name)}</span>
+                        ${formattedTime ? `<span class="time-tag">${escapeHTML(formattedTime)}</span>` : ''}
+                    </div>
+                    <div class="card-body">${escapeHTML(item.content)}</div>
+                `;
+
+                wall.appendChild(card);
+            });
+        }
+
+        /* 防止 XSS 攻擊字元轉義 */
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#032;");
+        }
+
+        /* ==========================================================================
+           【3 秒輪播 Highlight 特效】
+           ========================================================================== */
+        function startCarousel() {
+            const wall = document.getElementById('wall');
+            const cards = document.querySelectorAll('.card');
+
+            if (cards.length === 0) return;
+
+            // 啟用牆面的 Highlight 模式（會自動讓未選中的卡片微模糊）
+            wall.classList.add('has-highlight');
+
+            rotationTimer = setInterval(() => {
+                // 移除上一次選中的卡片高亮
+                if (currentIndex >= 0 && cards[currentIndex]) {
+                    cards[currentIndex].classList.remove('highlight');
+                }
+
+                // 計算下一張卡片索引 (循環輪播)
+                currentIndex = (currentIndex + 1) % cards.length;
+
+                // 加上當前卡片的高亮 Class
+                const targetCard = cards[currentIndex];
+                targetCard.classList.add('highlight');
+
+            }, ROTATE_INTERVAL);
+        }
+
+        /* ==========================================================================
+           【API Fetch 載入資料初始化】
+           ========================================================================== */
+        async function fetchMessages() {
+            const loading = document.getElementById('loading');
+
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) throw new Error('網絡回應異常');
+                
+                const csvText = await response.text();
+                messages = parseCSV(csvText);
+
+                // 隱藏 Loading 畫面
+                loading.style.display = 'none';
+
+                if (messages.length === 0) {
+                    document.getElementById('wall').innerHTML = '<p style="text-align:center; width:100%;">目前還沒有留言喔！</p>';
+                    return;
+                }
+
+                // 1. 動態繪製卡片牆
+                renderWall(messages);
+
+                // 2. 啟動 3 秒輪播 Highlight 特效
+                startCarousel();
+
+            } catch (error) {
+                console.error('讀取 CSV 失敗:', error);
+                loading.innerHTML = `<div class="loading-text" style="color: #d9534f;">😢 讀取留言失敗，請重新整理頁面試試看！</div>`;
+            }
+        }
+
+        // 頁面載入完成後執行
+        document.addEventListener('DOMContentLoaded', fetchMessages);
+    </script>
+</body>
+</html>
